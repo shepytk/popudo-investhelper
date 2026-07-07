@@ -4,11 +4,21 @@ from sqlalchemy.orm import Session
 from app.models import Company, FinancialStatement
 
 
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def search_companies(db: Session, query: str | None, country_id: int | None, sector_id: int | None) -> list[Company]:
     stmt = select(Company)
     if query:
-        pattern = f"%{query.lower()}%"
-        stmt = stmt.where(or_(Company.name.ilike(pattern), Company.ticker.ilike(pattern)))
+        escaped = _escape_like(query.lower())
+        pattern = f"%{escaped}%"
+        stmt = stmt.where(
+            or_(
+                Company.name.ilike(pattern, escape="\\"),
+                Company.ticker.ilike(pattern, escape="\\"),
+            )
+        )
     if country_id:
         stmt = stmt.where(Company.country_id == country_id)
     if sector_id:

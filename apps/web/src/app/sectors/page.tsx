@@ -2,25 +2,23 @@ import Link from "next/link";
 
 import { apiGet } from "@/lib/api";
 
-type Sector = { id: number; name: string; description: string };
 type Company = { id: number; name: string; ticker: string };
 
-type SectorWithCompanies = Sector & { companies: Company[] };
+type SectorWithCompanies = {
+  id: number;
+  name: string;
+  description: string;
+  companies: Company[];
+};
 
 export default async function SectorsPage() {
-  const sectors = await apiGet<Sector[]>("/api/sectors");
-  const sectorsWithCompanies: SectorWithCompanies[] = await Promise.all(
-    sectors.map(async (sector) => ({
-      ...sector,
-      companies: await apiGet<Company[]>(`/api/sectors/${sector.id}/companies`),
-    }))
-  );
+  const sectors = await apiGet<SectorWithCompanies[]>("/api/sectors/with-companies");
 
   return (
     <main className="mx-auto max-w-4xl p-8">
       <h1 className="text-2xl font-semibold">Sectors</h1>
       <div className="mt-6 space-y-6">
-        {sectorsWithCompanies.map((sector) => (
+        {sectors.map((sector) => (
           <section key={sector.id} className="rounded border p-4">
             <h2 className="text-xl font-medium">{sector.name}</h2>
             <p className="text-sm text-gray-600">{sector.description}</p>

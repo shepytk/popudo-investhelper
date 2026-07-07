@@ -1,7 +1,7 @@
-from datetime import date
+from datetime import datetime, timezone
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,7 @@ def generate_insight(company_id: int, db: Session = Depends(get_db)):
     db.add(
         Insight(
             company_id=company_id,
-            date=date.today(),
+            date=datetime.now(timezone.utc).date(),
             quality_score=75,
             growth_score=72,
             valuation_score=66,
@@ -43,12 +43,25 @@ def generate_insight(company_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/{company_id}/insights", response_model=list[AIInsightOut])
-def list_insights(company_id: int, db: Session = Depends(get_db)):
+def list_insights(
+    company_id: int,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
     company = db.get(Company, company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    insights = list(db.scalars(select(Insight).where(Insight.company_id == company_id).order_by(Insight.created_at.desc())))
+    insights = list(
+        db.scalars(
+            select(Insight)
+            .where(Insight.company_id == company_id)
+            .order_by(Insight.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    )
     return [
         {
             "summary": i.summary,

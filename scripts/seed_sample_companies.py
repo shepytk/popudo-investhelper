@@ -70,6 +70,7 @@ def seed_data(db: Session) -> None:
                 company_id=company.id,
                 period_type="annual",
                 fiscal_year=2025,
+                fiscal_quarter=4,
                 period_end_date=date(2025, 12, 31),
                 revenue=100000.0,
                 gross_profit=55000.0,
