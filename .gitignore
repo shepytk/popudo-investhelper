@@ -1,0 +1,9 @@
+node_modules/
+.venv/
+.env
+apps/web/.next/
+apps/web/node_modules/
+services/api/__pycache__/
+services/api/.pytest_cache/
+*.pyc
+*.db
