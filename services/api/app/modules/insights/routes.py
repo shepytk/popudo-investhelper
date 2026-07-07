@@ -35,6 +35,7 @@ def generate_insight(company_id: int, db: Session = Depends(get_db)):
             thesis=payload["quality_view"],
             risks=json.dumps(payload["risks"]),
             opportunities=json.dumps(payload["opportunities"]),
+            questions_for_further_research=json.dumps(payload["questions_for_further_research"]),
         )
     )
     db.commit()
@@ -73,7 +74,7 @@ def list_insights(
             "risk_view": "Review risk flags and operating environment.",
             "opportunities": json.loads(i.opportunities),
             "risks": json.loads(i.risks),
-            "questions_for_further_research": ["What drives margin durability?", "How resilient is demand?"],
+            "questions_for_further_research": json.loads(i.questions_for_further_research),
             "disclaimer": "This is investment research support, not financial advice.",
         }
         for i in insights

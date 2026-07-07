@@ -108,6 +108,7 @@ class Insight(Base):
     thesis: Mapped[str] = mapped_column(Text, nullable=False)
     risks: Mapped[str] = mapped_column(Text, nullable=False)
     opportunities: Mapped[str] = mapped_column(Text, nullable=False)
+    questions_for_further_research: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
 
 

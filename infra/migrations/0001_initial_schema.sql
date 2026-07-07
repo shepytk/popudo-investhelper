@@ -126,6 +126,7 @@ CREATE TABLE IF NOT EXISTS insight (
   thesis TEXT NOT NULL,
   risks TEXT NOT NULL,
   opportunities TEXT NOT NULL,
+  questions_for_further_research TEXT NOT NULL DEFAULT '[]',
   source_snapshot_id VARCHAR(120),
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
