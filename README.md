@@ -5,6 +5,7 @@ This repository now contains a minimal monorepo scaffold for a fundamental inves
 ## Implemented MVP baseline
 
 - Monorepo structure for web, API, ingestion, AI engine, packages, infra, docs, and scripts
+- Feature-first Speckit specs with layered architecture in `docs/specs`
 - Docker Compose with `web`, `api`, `db` (PostgreSQL), `redis`, and `minio`
 - FastAPI backend with:
   - `GET /health`
