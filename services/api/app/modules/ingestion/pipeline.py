@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Company, FinancialFact, SourceSnapshot
+from app.models import Company, FinancialFact, FxObservation, QuoteObservation, SecurityListing, SourceSnapshot
 from app.modules.companies.normalization import normalize_amount, normalize_currency, validate_period
 from app.modules.ingestion.contracts import ProviderBatch, SnapshotStore
 from app.modules.ingestion.identity import register_listing
@@ -52,7 +52,7 @@ def import_batch(db: Session, company_id: int, batch: ProviderBatch, store: Snap
         )
         db.add(snapshot)
         db.flush()
-    counts = {"facts": 0, "listings": 0}
+    counts = {"facts": 0, "listings": 0, "quotes": 0, "fx_rates": 0}
     for fact in batch.facts:
         validate_period(fact.period_type, fact.fiscal_year, fact.fiscal_quarter, fact.period_end)
         if fact.period_start and fact.period_start > fact.period_end:
@@ -86,4 +86,52 @@ def import_batch(db: Session, company_id: int, batch: ProviderBatch, store: Snap
     for listing in batch.listings:
         register_listing(db, company_id, listing, snapshot)
         counts["listings"] += 1
+    for quote in batch.quotes:
+        listing = db.get(SecurityListing, quote.listing_id)
+        if listing is None or not listing.verified:
+            raise ValueError("Quote requires a verified listing")
+        currency = normalize_currency(quote.currency)
+        if currency != listing.currency_code:
+            raise ValueError("Quote currency conflicts with listing")
+        close = Decimal(str(quote.close))
+        if not close.is_finite() or close <= 0:
+            raise ValueError("Invalid quote")
+        existing = db.scalar(select(QuoteObservation).where(
+            QuoteObservation.listing_id == quote.listing_id,
+            QuoteObservation.provider == source.provider,
+            QuoteObservation.session_date == quote.session_date,
+            QuoteObservation.revision == quote.revision,
+        ))
+        if existing:
+            if existing.close != close or existing.currency_code != currency:
+                raise ValueError("Conflicting quote revision")
+            continue
+        db.add(QuoteObservation(
+            listing_id=listing.id, source_snapshot_id=snapshot.id,
+            provider=source.provider, session_date=quote.session_date,
+            revision=quote.revision, close=close, currency_code=currency,
+        ))
+        counts["quotes"] += 1
+    for fx in batch.fx_rates:
+        base = normalize_currency(fx.base_currency)
+        target = normalize_currency(fx.quote_currency)
+        rate = Decimal(str(fx.rate))
+        if base == target or not rate.is_finite() or rate <= 0:
+            raise ValueError("Invalid sourced FX rate")
+        existing = db.scalar(select(FxObservation).where(
+            FxObservation.provider == source.provider,
+            FxObservation.observed_date == fx.observed_date,
+            FxObservation.base_currency == base,
+            FxObservation.quote_currency == target,
+        ))
+        if existing:
+            if existing.rate != rate:
+                raise ValueError("Conflicting FX observation")
+            continue
+        db.add(FxObservation(
+            source_snapshot_id=snapshot.id, provider=source.provider,
+            observed_date=fx.observed_date,
+            base_currency=base, quote_currency=target, rate=rate,
+        ))
+        counts["fx_rates"] += 1
     return counts
