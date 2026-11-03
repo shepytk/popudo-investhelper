@@ -73,6 +73,8 @@ def main():
     if os.getenv("INVESTHELPER_S3_BUCKET"):
         store = S3SnapshotStore(os.environ["INVESTHELPER_S3_BUCKET"], os.getenv("INVESTHELPER_S3_ENDPOINT"))
     else:
+        if os.getenv("INVESTHELPER_ENV", "production") not in {"development", "test"}:
+            raise RuntimeError("Production identity verification requires S3/MinIO snapshot storage")
         store = FileSnapshotStore(os.getenv("INVESTHELPER_SNAPSHOT_DIR", "./data/snapshots"))
     with SessionLocal.begin() as db:
         attest_sec_cik(db, store, args.company_id, args.cik, os.getenv("INVESTHELPER_SEC_USER_AGENT", ""))
