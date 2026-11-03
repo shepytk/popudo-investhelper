@@ -31,6 +31,40 @@ jobs:
           INVESTHELPER_ENV: test
           INVESTHELPER_DATABASE_URL: sqlite:///./test-investhelper-p0.db
         run: python -m pytest -q services/api/tests
+  postgres-migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: investhelper
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d investhelper"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply existing schema and P0 migration
+        env:
+          PGPASSWORD: test
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U test -d investhelper -f infra/migrations/0001_initial_schema.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U test -d investhelper -f infra/migrations/0002_p0_verified_evidence.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U test -d investhelper -f infra/migrations/0002_p0_verified_evidence.sql
+      - name: Check provenance columns and nullable scores
+        env:
+          PGPASSWORD: test
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U test -d investhelper -c "SELECT source_url, reporting_currency, amount_unit, published_date, retrieved_at FROM financial_statement LIMIT 0;"
+          psql -v ON_ERROR_STOP=1 -h localhost -U test -d investhelper -c "SELECT analysis_status, evidence_json, source_snapshot_id FROM insight LIMIT 0;"
+          psql -v ON_ERROR_STOP=1 -h localhost -U test -d investhelper -c "INSERT INTO country (name, iso_code, currency_code, region) VALUES ('Example', 'EXA', 'EUR', 'Europe');"
   frontend:
     runs-on: ubuntu-latest
     defaults:
