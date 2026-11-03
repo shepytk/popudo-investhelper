@@ -90,3 +90,40 @@ class SnapshotStore(Protocol):
     def get(self, key: str) -> bytes:
         """Retrieve exactly the bytes for this content-addressed key."""
         ...
+
+
+@dataclass(frozen=True)
+class ProviderCorporateAction:
+    """Optional vendor-neutral split, dividend or merger record."""
+    listing_id: int
+    action_id: str
+    action_type: str
+    effective_date: date
+    amount: Decimal | None = None
+    currency: str | None = None
+
+
+@dataclass(frozen=True)
+class ProviderEstimate:
+    """Source-identified forward estimate; never treat as reported earnings."""
+    listing_id: int
+    estimate_id: str
+    metric: str
+    period_end: date
+    value: Decimal
+    currency: str
+    published_at: datetime
+
+
+class CorporateActionProvider(Protocol):
+    name: str
+
+    def collect_actions(self, listing_id: int) -> tuple[Evidence, tuple[ProviderCorporateAction, ...]]:
+        ...
+
+
+class ConsensusEstimateProvider(Protocol):
+    name: str
+
+    def collect_estimates(self, listing_id: int) -> tuple[Evidence, tuple[ProviderEstimate, ...]]:
+        ...
