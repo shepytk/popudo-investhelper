@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.models import ExternalIdentifier, IngestionJob
 from app.modules.ingestion.contracts import SnapshotStore
 from app.modules.ingestion.pipeline import import_batch
-from app.modules.ingestion.providers import provider_from_environment
+from app.modules.ingestion.providers import ProviderRateLimited, provider_from_environment
 
 
 def naive_utc() -> datetime:
@@ -97,5 +97,8 @@ def work_one(session_factory: sessionmaker, store: SnapshotStore) -> bool:
                 job.state = "dead_letter"
             else:
                 job.state = "retry"
-                job.next_run_at = naive_utc() + timedelta(seconds=min(3600, 30 * (2 ** (job.attempts - 1))))
+                backoff = min(3600, 30 * (2 ** (job.attempts - 1)))
+                if isinstance(exc, ProviderRateLimited):
+                    backoff = max(backoff, exc.retry_after)
+                job.next_run_at = naive_utc() + timedelta(seconds=backoff)
     return True
