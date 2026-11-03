@@ -136,3 +136,28 @@ def test_historical_fabricated_insights_are_not_exposed() -> None:
             if fake:
                 db.delete(fake)
                 db.commit()
+
+
+def test_p1_domain_errors_and_missing_data_are_machine_readable() -> None:
+    missing = client.get("/api/companies/999999")
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == {
+        "code": "company_not_found", "message": "Company not found", "retryable": False,
+    }
+
+    company = client.get("/api/companies/search", params={"q": "NVDA"}).json()[0]
+    quotes = client.get(f"/api/companies/{company['id']}/quotes")
+    assert quotes.status_code == 404
+    assert quotes.json()["detail"]["code"] == "missing_data"
+    assert quotes.json()["detail"]["retryable"] is True
+
+    facts = client.get(f"/api/companies/{company['id']}/facts")
+    assert facts.status_code == 200
+    assert facts.json()["status"] == "missing_data"
+
+    bad_as_of = client.get(
+        f"/api/companies/{company['id']}/facts",
+        params={"as_of": "2026-10-31T12:00:00"},
+    )
+    assert bad_as_of.status_code == 422
+    assert bad_as_of.json()["detail"]["code"] == "invalid_as_of"
