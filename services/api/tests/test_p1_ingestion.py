@@ -175,7 +175,8 @@ def test_queue_requires_attested_company_mapping(context):
         job = enqueue(db, company_id, "sec_edgar", "0000001234")
         assert job.id == enqueue(db, company_id, "sec_edgar", "0000001234").id
         db.flush()
+        job_id = job.id
     with factory.begin() as db:
         selected = claim(db)
-        assert selected.id == job.id
+        assert selected.id == job_id
         assert selected.attempts == 1
