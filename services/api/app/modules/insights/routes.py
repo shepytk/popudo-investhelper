@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Company, FinancialStatement, Insight
 from app.modules.companies.verification import verified_statements
+from app.modules.companies.errors import domain_error
 from app.modules.insights.schemas import AIInsightOut
 from app.modules.insights.service import DISCLAIMER, generate_verified_insight
 from app.shared.database.session import get_db
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/api/ai/companies", tags=["research-insights"])
 def generate_insight(company_id: int, db: Session = Depends(get_db)):
     company = db.get(Company, company_id)
     if not company:
-        raise HTTPException(status_code=404, detail="Company not found")
+        raise domain_error(404, "company_not_found", "Company not found")
 
     statements = list(db.scalars(
         select(FinancialStatement)
@@ -28,10 +29,7 @@ def generate_insight(company_id: int, db: Session = Depends(get_db)):
     ))
     verified = verified_statements(statements)
     if not verified:
-        raise HTTPException(status_code=422, detail={
-            "code": "not_computable",
-            "reason": "No current annual financial statement with validated sources, currency, units and reconciled cash flow.",
-        })
+        raise domain_error(422, "not_computable", "No current annual financial statement with validated source, currency, units and reconciled cash flow.")
     payload, snapshot = generate_verified_insight(company, verified[0])
     db.add(Insight(
         company_id=company_id,

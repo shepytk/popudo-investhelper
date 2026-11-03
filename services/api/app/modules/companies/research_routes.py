@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import Company, QuoteObservation, Security, SecurityListing, SourceSnapshot
 from app.modules.companies.fact_schemas import FactPageOut, SourcedFactOut, SourcedQuoteOut
+from app.modules.companies.errors import domain_error
 from app.modules.companies.facts import facts_as_of
 from app.modules.ingestion.identity_schemas import ListingOut
 from app.shared.database.session import get_db
@@ -23,12 +24,12 @@ def get_sourced_facts(
     db: Session = Depends(get_db),
 ):
     if not db.get(Company, company_id):
-        raise HTTPException(status_code=404, detail={"code": "company_not_found", "message": "Unknown company"})
+        raise domain_error(404, "company_not_found", "Unknown company")
     cutoff = as_of or datetime.now(timezone.utc)
     if cutoff.tzinfo is None:
-        raise HTTPException(status_code=422, detail={"code": "invalid_as_of", "message": "as_of must specify a timezone"})
+        raise domain_error(422, "invalid_as_of", "as_of must specify a timezone")
     if cutoff > datetime.now(timezone.utc):
-        raise HTTPException(status_code=422, detail={"code": "invalid_as_of", "message": "Future as_of is not supported"})
+        raise domain_error(422, "invalid_as_of", "Future as_of is not supported")
     rows = facts_as_of(db, company_id, cutoff, limit=limit, offset=offset)
     items = [
         SourcedFactOut(
@@ -43,7 +44,7 @@ def get_sourced_facts(
         )
         for fact, snapshot in rows
     ]
-    return FactPageOut(items=items, as_of=cutoff, limit=limit, offset=offset)
+    return FactPageOut(status="ok" if items else "missing_data", items=items, as_of=cutoff, limit=limit, offset=offset)
 
 
 @router.get("/{company_id}/listings", response_model=list[ListingOut])
@@ -75,15 +76,10 @@ def get_company_quotes(
 ):
     """Return sourced recent quotes or an explicit missing/stale data error."""
     if not db.get(Company, company_id):
-        raise HTTPException(status_code=404, detail={
-            "code": "company_not_found", "message": "Unknown company", "retryable": False,
-        })
+        raise domain_error(404, "company_not_found", "Unknown company")
     cutoff = as_of or datetime.now(timezone.utc)
     if cutoff.tzinfo is None or cutoff > datetime.now(timezone.utc):
-        raise HTTPException(status_code=422, detail={
-            "code": "invalid_as_of", "message": "Specify a non-future timezone-aware as_of",
-            "retryable": False,
-        })
+        raise domain_error(422, "invalid_as_of", "Specify a non-future timezone-aware as_of")
     utc_cutoff = cutoff.astimezone(timezone.utc)
     instant = utc_cutoff.replace(tzinfo=None)
     rows = list(db.execute(
@@ -99,16 +95,10 @@ def get_company_quotes(
         .limit(limit)
     ))
     if not rows:
-        raise HTTPException(status_code=404, detail={
-            "code": "missing_data", "message": "No source-verified market quotations available",
-            "retryable": True,
-        })
+        raise domain_error(404, "missing_data", "No source-verified market quotations available", retryable=True)
     latest_date = rows[0][0].session_date
     if (utc_cutoff.date() - latest_date).days > 10:
-        raise HTTPException(status_code=422, detail={
-            "code": "stale_data", "message": "Latest quote is older than 10 calendar days",
-            "retryable": True,
-        })
+        raise domain_error(422, "stale_data", "Latest quote is older than 10 calendar days", retryable=True)
     return [
         SourcedQuoteOut(
             listing_id=listing.id, mic=listing.mic, symbol=listing.symbol,
