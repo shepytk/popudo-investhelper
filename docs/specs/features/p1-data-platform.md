@@ -93,13 +93,16 @@ development only**, omit S3 settings and set
 `INVESTHELPER_ENV=development`, storing snapshots in `./data/snapshots`.
 
 ```bash
+python scripts/initialize_taxonomy.py
+python scripts/register_company.py --name 'NVIDIA Corporation' --ticker NVDA --exchange NASDAQ --country USA --sector Semiconductors --industry Semiconductors --currency USD
+# Use the ID printed by the previous command; 2 is only illustrative.
 python scripts/link_sec_company.py --company-id 2 --cik 0001045810
 python scripts/enqueue_ingestion.py --company-id 2 --provider sec_edgar --subject 0001045810
 python scripts/run_ingestion_jobs.py --once
 python scripts/ingestion_status.py
 ```
 
-The example company ID is illustrative; verify the actual row before running.
+The example company ID is illustrative; always use the ID returned by registration. Production onboarding never inserts financial fixtures or generates ISINs.
 The identity linking command checks the SEC CIK and reported ticker, refusing
 mismatched issuers. A scheduler can invoke
 `scripts/schedule_verified_ingestion.py` (idempotent) followed by worker
@@ -114,6 +117,7 @@ processes. For rate limits, a 429 triggers an explicit bounded backoff.
 - `GET /api/companies/{id}/facts?as_of=2026-11-03T00:00:00Z`:
   only raw-source-backed facts published and retrieved by that time.
 - `GET /api/companies/{id}/listings`: verified listing identities.
+- `GET /api/companies/{id}/quotes`: source-backed quotes or typed missing/stale errors.
 - Legacy company list/search endpoints remain list-shaped but are capped at 100 rows.
 
 Money fields are JSON decimal strings to preserve precision, not JS
