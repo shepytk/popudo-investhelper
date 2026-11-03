@@ -62,6 +62,11 @@ class Company(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
 
+    __table_args__ = (
+        Index("ix_company_name_id", "name", "id"),
+        Index("ix_company_country_sector", "country_id", "sector_id"),
+    )
+
     country: Mapped[Country] = relationship()
     sector: Mapped[Sector] = relationship()
     industry: Mapped[Industry] = relationship()
@@ -69,6 +74,7 @@ class Company(Base):
 
 class FinancialStatement(Base):
     __tablename__ = "financial_statement"
+    __table_args__ = (Index("ix_statement_company_period", "company_id", "period_end_date"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     company_id: Mapped[int] = mapped_column(ForeignKey("company.id"), nullable=False)
@@ -220,6 +226,7 @@ class Security(Base):
     verified_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
     __table_args__ = (
+        Index("ix_security_company", "company_id"),
         CheckConstraint("isin_verified = false OR (isin IS NOT NULL AND identifier_source IS NOT NULL AND identifier_source_url IS NOT NULL AND verified_at IS NOT NULL)", name="ck_security_verified_evidence"),
     )
 
