@@ -49,6 +49,9 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
             </tr>
           </thead>
           <tbody>
+            {financials.length === 0 && (
+              <tr><td colSpan={5} className="py-3 text-gray-600">No verified financial statements available. Source, period, units or cash-flow checks may be missing.</td></tr>
+            )}
             {financials.map((item) => (
               <tr key={item.fiscal_year}>
                 <td>{item.fiscal_year}</td>
