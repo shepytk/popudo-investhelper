@@ -84,7 +84,8 @@ def get_company_quotes(
             "code": "invalid_as_of", "message": "Specify a non-future timezone-aware as_of",
             "retryable": False,
         })
-    instant = cutoff.astimezone(timezone.utc).replace(tzinfo=None)
+    utc_cutoff = cutoff.astimezone(timezone.utc)
+    instant = utc_cutoff.replace(tzinfo=None)
     rows = list(db.execute(
         select(QuoteObservation, SecurityListing, SourceSnapshot)
         .join(SecurityListing, QuoteObservation.listing_id == SecurityListing.id)
@@ -92,7 +93,7 @@ def get_company_quotes(
         .join(SourceSnapshot, QuoteObservation.source_snapshot_id == SourceSnapshot.id)
         .where(Security.company_id == company_id)
         .where(SecurityListing.verified.is_(True))
-        .where(QuoteObservation.session_date <= cutoff.date())
+        .where(QuoteObservation.session_date <= utc_cutoff.date())
         .where(SourceSnapshot.retrieved_at <= instant)
         .order_by(QuoteObservation.session_date.desc(), QuoteObservation.id.desc())
         .limit(limit)
@@ -103,7 +104,7 @@ def get_company_quotes(
             "retryable": True,
         })
     latest_date = rows[0][0].session_date
-    if (cutoff.date() - latest_date).days > 10:
+    if (utc_cutoff.date() - latest_date).days > 10:
         raise HTTPException(status_code=422, detail={
             "code": "stale_data", "message": "Latest quote is older than 10 calendar days",
             "retryable": True,
@@ -117,5 +118,5 @@ def get_company_quotes(
             retrieved_at=snapshot.retrieved_at,
         )
         for quote, listing, snapshot in rows
-        if (cutoff.date() - quote.session_date).days <= 10
+        if (utc_cutoff.date() - quote.session_date).days <= 10
     ]
