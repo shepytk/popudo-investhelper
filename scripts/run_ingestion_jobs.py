@@ -23,7 +23,9 @@ def main():
         active = work_one(SessionLocal, store)
         if args.once:
             break
-        if not active:
+        if active:
+            time.sleep(1)  # conservative request pacing for SEC and other providers
+        else:
             time.sleep(max(5, args.interval_seconds))
 
 
