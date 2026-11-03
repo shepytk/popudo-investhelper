@@ -23,6 +23,7 @@ class SourcedFactOut(BaseModel):
 
 
 class FactPageOut(BaseModel):
+    status: str
     items: list[SourcedFactOut]
     limit: int
     offset: int
