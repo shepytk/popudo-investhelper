@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -35,5 +35,10 @@ class FinancialOut(BaseModel):
     capital_expenditure: float
     free_cash_flow: float
     source: str
+    source_url: str | None
+    reporting_currency: str | None
+    amount_unit: str | None
+    published_date: date | None
+    retrieved_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)

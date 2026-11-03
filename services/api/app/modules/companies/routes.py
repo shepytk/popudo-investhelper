@@ -33,4 +33,6 @@ def get_company(company_id: int, db: Session = Depends(get_db)):
 
 @router.get("/{company_id}/financials", response_model=list[FinancialOut])
 def get_company_financials(company_id: int, db: Session = Depends(get_db)):
+    if not repository.get_company(db, company_id):
+        raise HTTPException(status_code=404, detail="Company not found")
     return repository.get_company_financials(db, company_id)

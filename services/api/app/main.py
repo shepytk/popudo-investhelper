@@ -8,13 +8,9 @@ from app.modules.insights.routes import router as insights_router
 from app.modules.sectors.routes import router as sectors_router
 from app.shared.database.base import Base
 from app.shared.database.session import SessionLocal, engine
-from scripts.seed_sample_companies import seed_data
 
 
 Base.metadata.create_all(bind=engine)
-with SessionLocal() as session:
-    seed_data(session)
-
 app = FastAPI(title=settings.app_name)
 
 app.include_router(countries_router)

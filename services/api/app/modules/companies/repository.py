@@ -2,6 +2,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models import Company, FinancialStatement
+from app.modules.companies.verification import verified_statements
 
 
 def _escape_like(value: str) -> str:
@@ -36,4 +37,4 @@ def get_company_financials(db: Session, company_id: int) -> list[FinancialStatem
         .where(FinancialStatement.company_id == company_id)
         .order_by(FinancialStatement.fiscal_year.desc())
     )
-    return list(db.scalars(stmt))
+    return verified_statements(list(db.scalars(stmt)))

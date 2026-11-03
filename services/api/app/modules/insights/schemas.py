@@ -1,7 +1,20 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+
+class EvidenceOut(BaseModel):
+    metric_period: str
+    published_date: str
+    retrieved_at: str
+    source: str
+    source_url: str
+    reporting_currency: str
+    amount_unit: str
 
 
 class AIInsightOut(BaseModel):
+    status: str
+    as_of: str
+    evidence: list[EvidenceOut]
     summary: str
     business_model: str
     quality_view: str
@@ -13,3 +26,5 @@ class AIInsightOut(BaseModel):
     risks: list[str]
     questions_for_further_research: list[str]
     disclaimer: str
+
+    model_config = ConfigDict(extra="forbid")

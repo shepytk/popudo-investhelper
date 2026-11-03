@@ -1,9 +1,9 @@
-from datetime import date
+import os
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Company, Country, FinancialStatement, Industry, Sector
+from app.models import Company, Country, Industry, Sector
 from scripts.seed_countries import seed_countries
 from scripts.seed_sectors import seed_sectors
 
@@ -21,7 +21,10 @@ COMPANIES = [
 ]
 
 
-def seed_data(db: Session) -> None:
+def seed_data(db: Session, *, allow_demo: bool = False) -> None:
+    """Explicit development fixture loader. Never called by API startup."""
+    if not allow_demo or os.getenv("INVESTHELPER_ENV", "production").lower() not in {"development", "test"}:
+        raise RuntimeError("Demo seeding is allowed only with allow_demo=True in development/test")
     seed_countries(db)
     seed_sectors(db)
 
@@ -52,7 +55,7 @@ def seed_data(db: Session) -> None:
         company = Company(
             name=name,
             ticker=ticker,
-            isin=f"{country_iso}{ticker}0000",
+            isin="",  # Unknown, never synthesize an identifier.
             exchange=exchange,
             country_id=countries[country_iso].id,
             sector_id=sector.id,
@@ -65,28 +68,6 @@ def seed_data(db: Session) -> None:
         db.add(company)
         db.flush()
 
-        db.add(
-            FinancialStatement(
-                company_id=company.id,
-                period_type="annual",
-                fiscal_year=2025,
-                fiscal_quarter=4,
-                period_end_date=date(2025, 12, 31),
-                revenue=100000.0,
-                gross_profit=55000.0,
-                operating_income=30000.0,
-                net_income=24000.0,
-                total_assets=180000.0,
-                total_liabilities=90000.0,
-                total_equity=90000.0,
-                cash_and_equivalents=25000.0,
-                total_debt=30000.0,
-                operating_cash_flow=28000.0,
-                capital_expenditure=5000.0,
-                free_cash_flow=23000.0,
-                source="seed",
-            )
-        )
 
     db.commit()
 
@@ -95,4 +76,4 @@ if __name__ == "__main__":
     from app.shared.database.session import SessionLocal
 
     with SessionLocal() as session:
-        seed_data(session)
+        seed_data(session, allow_demo=True)
