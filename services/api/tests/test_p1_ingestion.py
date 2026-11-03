@@ -180,3 +180,93 @@ def test_queue_requires_attested_company_mapping(context):
         selected = claim(db)
         assert selected.id == job_id
         assert selected.attempts == 1
+
+
+def test_issuer_ticker_can_repeat_across_markets(context):
+    factory, company_id, _store = context
+    with factory.begin() as db:
+        original = db.get(Company, company_id)
+        other = Company(
+            name="Other issuer", ticker=original.ticker,
+            isin="", exchange="XAMS", country_id=original.country_id,
+            sector_id=original.sector_id, industry_id=original.industry_id,
+            currency_code="EUR", website_url="", investor_relations_url="",
+            description="Distinct issuer sharing a display ticker",
+        )
+        db.add(other)
+        db.flush()
+        assert other.id != original.id
+
+
+def test_alias_history_is_reproducible(context):
+    from app.modules.ingestion.identity import register_alias
+    factory, company_id, store = context
+    with factory.begin() as db:
+        import_batch(db, company_id, batch(), store)
+        evidence = db.scalar(select(SourceSnapshot))
+        listing = register_listing(db, company_id, ProviderListing(
+            security_type="equity", share_class="ordinary",
+            isin="US0378331005", mic="XNAS", symbol="EXM",
+            currency="USD", is_adr=False, valid_from=date(2020, 1, 1),
+        ), evidence)
+        alias = register_alias(db, listing.id, "OLDX", date(2019, 1, 1), date(2019, 12, 31), evidence)
+        same = register_alias(db, listing.id, "OLDX", date(2019, 1, 1), date(2019, 12, 31), evidence)
+        assert alias.id == same.id
+        with pytest.raises(ValueError, match="Overlapping"):
+            register_alias(db, listing.id, "OLDX", date(2019, 6, 1), None, evidence)
+
+
+def test_market_quote_and_fx_revision_are_idempotent(context):
+    from app.models import FxObservation, QuoteObservation
+    from app.modules.ingestion.contracts import ProviderQuote, ProviderFX
+    factory, company_id, store = context
+    with factory.begin() as db:
+        import_batch(db, company_id, batch(), store)
+        evidence = db.scalar(select(SourceSnapshot))
+        listing = register_listing(db, company_id, ProviderListing(
+            security_type="equity", share_class="ordinary", isin="US0378331005",
+            mic="XNAS", symbol="EXM", currency="USD", is_adr=False,
+            valid_from=date(2020, 1, 1),
+        ), evidence)
+        listing_id = listing.id
+    payload = ProviderBatch(
+        evidence=batch().evidence,
+        quotes=(ProviderQuote(listing_id, date(2026, 10, 31), Decimal("150.01"), "USD"),),
+        fx_rates=(ProviderFX(date(2026, 10, 31), "USD", "EUR", Decimal("0.92")),),
+    )
+    with factory.begin() as db:
+        assert import_batch(db, company_id, payload, store)["quotes"] == 1
+        assert import_batch(db, company_id, payload, store)["fx_rates"] == 0
+        assert db.scalar(select(QuoteObservation)).close == Decimal("150.01")
+        assert db.scalar(select(FxObservation)).rate == Decimal("0.92")
+
+
+def test_worker_dead_letters_persistent_provider_failure(context, monkeypatch):
+    from app.modules.ingestion import jobs
+    factory, company_id, store = context
+    with factory.begin() as db:
+        import_batch(db, company_id, batch(), store)
+        evidence = db.scalar(select(SourceSnapshot))
+        db.add(ExternalIdentifier(
+            company_id=company_id, provider="sec_edgar",
+            provider_company_id="0000001234",
+            source_snapshot_id=evidence.id,
+            verified_at=datetime.now(timezone.utc),
+        ))
+    with factory.begin() as db:
+        job_id = enqueue(db, company_id, "sec_edgar", "0000001234").id
+
+    class Unavailable:
+        name = "sec_edgar"
+        def collect(self, subject):
+            raise RuntimeError("offline provider")
+
+    monkeypatch.setattr(jobs, "provider_from_environment", lambda name: Unavailable())
+    for index in range(3):
+        assert jobs.work_one(factory, store)
+        with factory.begin() as db:
+            job = db.get(IngestionJob, job_id)
+            assert job.attempts == index + 1
+            assert job.state == ("dead_letter" if index == 2 else "retry")
+            if index < 2:
+                job.next_run_at = jobs.naive_utc() - timedelta(seconds=1)
