@@ -6,6 +6,7 @@ import os
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 from app.modules.ingestion.contracts import Evidence, FinancialDataProvider, ProviderBatch, ProviderFact
 
@@ -28,6 +29,12 @@ class ProviderUnavailable(RuntimeError):
     pass
 
 
+class ProviderRateLimited(ProviderUnavailable):
+    def __init__(self, retry_after: int = 60):
+        super().__init__("Market data provider rate limited the request")
+        self.retry_after = max(10, min(retry_after, 3600))
+
+
 class SecCompanyFactsProvider(FinancialDataProvider):
     name = "sec_edgar"
 
@@ -45,10 +52,16 @@ class SecCompanyFactsProvider(FinancialDataProvider):
             "User-Agent": self.user_agent,
             "Accept": "application/json",
         })
-        with urlopen(request, timeout=25) as response:
-            raw = response.read(12_000_001)
-            if len(raw) > 12_000_000:
-                raise ValueError("SEC response exceeds configured maximum")
+        try:
+            with urlopen(request, timeout=25) as response:
+                raw = response.read(12_000_001)
+                if len(raw) > 12_000_000:
+                    raise ValueError("SEC response exceeds configured maximum")
+        except HTTPError as error:
+            if error.code == 429:
+                value = error.headers.get("Retry-After", "60")
+                raise ProviderRateLimited(int(value) if value.isdigit() else 60) from error
+            raise ProviderUnavailable(f"SEC provider HTTP {error.code}") from error
         observed = datetime.now(timezone.utc)
         parsed = json.loads(raw)
         if str(parsed.get("cik", "")).zfill(10) != cik:
