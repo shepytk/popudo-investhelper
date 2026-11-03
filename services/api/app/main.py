@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.modules.companies.routes import router as companies_router
+from app.modules.companies.research_routes import router as research_router
 from app.modules.countries.routes import router as countries_router
 from app.modules.insights.routes import router as insights_router
 from app.modules.sectors.routes import router as sectors_router
@@ -14,6 +15,7 @@ app = FastAPI(title=settings.app_name)
 app.include_router(countries_router)
 app.include_router(sectors_router)
 app.include_router(companies_router)
+app.include_router(research_router)
 app.include_router(insights_router)
 
 
