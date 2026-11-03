@@ -103,3 +103,30 @@ def test_company_search_escapes_like_wildcards() -> None:
     response = client.get("/api/companies/search", params={"q": "%"})
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_historical_fabricated_insights_are_not_exposed() -> None:
+    nvidia = client.get("/api/companies/search", params={"q": "NVDA"}).json()[0]
+    company_id = nvidia["id"]
+    with SessionLocal() as db:
+        fake = Insight(
+            company_id=company_id, date=date(2026, 10, 1),
+            quality_score=75, growth_score=72, valuation_score=66,
+            balance_sheet_score=70, risk_score=45, overall_score=69,
+            summary="Old mocked summary", thesis="Generic placeholder",
+            risks="[]", opportunities="[]", questions_for_further_research="[]",
+            analysis_status=None, evidence_json=None,
+        )
+        db.add(fake)
+        db.commit()
+        fake_id = fake.id
+    try:
+        response = client.get(f"/api/ai/companies/{company_id}/insights")
+        assert response.status_code == 200
+        assert all(item["summary"] != "Old mocked summary" for item in response.json())
+    finally:
+        with SessionLocal() as db:
+            fake = db.get(Insight, fake_id)
+            if fake:
+                db.delete(fake)
+                db.commit()
