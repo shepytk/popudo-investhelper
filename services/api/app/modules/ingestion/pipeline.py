@@ -123,6 +123,7 @@ def import_batch(db: Session, company_id: int, batch: ProviderBatch, store: Snap
             FxObservation.observed_date == fx.observed_date,
             FxObservation.base_currency == base,
             FxObservation.quote_currency == target,
+            FxObservation.revision == fx.revision,
         ))
         if existing:
             if existing.rate != rate:
@@ -132,6 +133,7 @@ def import_batch(db: Session, company_id: int, batch: ProviderBatch, store: Snap
             source_snapshot_id=snapshot.id, provider=source.provider,
             observed_date=fx.observed_date,
             base_currency=base, quote_currency=target, rate=rate,
+            revision=fx.revision,
         ))
         counts["fx_rates"] += 1
     return counts
