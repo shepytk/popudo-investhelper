@@ -10,6 +10,7 @@ ErrorCode = Literal[
     "missing_filing",
     "missing_data",
     "stale_data",
+    "invalid_as_of",
     "not_computable",
     "provider_unavailable",
     "invalid_provenance",
