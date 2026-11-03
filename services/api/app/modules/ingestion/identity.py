@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import Security, SecurityListing, SourceSnapshot
+from app.models import Security, SecurityListing, SourceSnapshot, SymbolAlias
 from app.modules.ingestion.contracts import ProviderListing
 
 
@@ -33,18 +33,19 @@ def register_listing(db: Session, company_id: int, data: ProviderListing, source
     if urlsplit(source.source_url).scheme != "https":
         raise ValueError("Listing provenance must use HTTPS")
     # Never assign the same ISIN to distinct companies.
+    verified_isin = data.isin.strip().upper() if data.isin else None
     security = None
-    if data.isin:
-        security = db.scalar(select(Security).where(Security.isin == data.isin))
+    if verified_isin:
+        security = db.scalar(select(Security).where(Security.isin == verified_isin))
         if security and security.company_id != company_id:
             raise ValueError("ISIN already belongs to a different issuer")
     if security is None:
         security = Security(
             company_id=company_id, security_type=data.security_type,
-            share_class=data.share_class, isin=data.isin,
-            isin_verified=bool(data.isin), identifier_source=source.provider if data.isin else None,
-            identifier_source_url=source.source_url if data.isin else None,
-            verified_at=source.retrieved_at if data.isin else None,
+            share_class=data.share_class, isin=verified_isin,
+            isin_verified=bool(verified_isin), identifier_source=source.provider if verified_isin else None,
+            identifier_source_url=source.source_url if verified_isin else None,
+            verified_at=source.retrieved_at if verified_isin else None,
         )
         db.add(security)
         db.flush()
@@ -66,6 +67,37 @@ def register_listing(db: Session, company_id: int, data: ProviderListing, source
         currency_code=data.currency, is_adr=data.is_adr,
         valid_from=data.valid_from, valid_to=data.valid_to,
         source_snapshot_id=source.id, verified=True,
+    )
+    db.add(row)
+    db.flush()
+    return row
+
+
+def register_alias(
+    db: Session, listing_id: int, alias: str,
+    valid_from: date, valid_to: date | None, source: SourceSnapshot,
+) -> SymbolAlias:
+    if not alias or len(alias) > 30:
+        raise ValueError("Invalid alias")
+    listing = db.get(SecurityListing, listing_id)
+    if listing is None or not listing.verified:
+        raise ValueError("Symbol aliases require an existing verified listing")
+    if valid_to is not None and valid_to < valid_from:
+        raise ValueError("Alias validity is inverted")
+    candidates = list(db.scalars(select(SymbolAlias).where(
+        SymbolAlias.listing_id == listing_id,
+        SymbolAlias.symbol == alias,
+        SymbolAlias.valid_from <= (valid_to or date.max),
+        or_(SymbolAlias.valid_to.is_(None), SymbolAlias.valid_to >= valid_from),
+    )))
+    for existing in candidates:
+        if (existing.valid_from, existing.valid_to) == (valid_from, valid_to):
+            return existing
+        raise ValueError("Overlapping symbol alias windows")
+    row = SymbolAlias(
+        listing_id=listing_id, symbol=alias,
+        valid_from=valid_from, valid_to=valid_to,
+        source_snapshot_id=source.id,
     )
     db.add(row)
     db.flush()
