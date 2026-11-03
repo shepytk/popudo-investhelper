@@ -49,7 +49,7 @@ class Company(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    ticker: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
+    ticker: Mapped[str] = mapped_column(String(20), nullable=False)
     isin: Mapped[str] = mapped_column(String(20), default="", nullable=False)
     exchange: Mapped[str] = mapped_column(String(120), nullable=False)
     country_id: Mapped[int] = mapped_column(ForeignKey("country.id"), nullable=False)
@@ -64,6 +64,7 @@ class Company(Base):
 
     __table_args__ = (
         Index("ix_company_name_id", "name", "id"),
+        Index("ix_company_ticker", "ticker"),
         Index("ix_company_country_sector", "country_id", "sector_id"),
     )
 
@@ -331,8 +332,9 @@ class FxObservation(Base):
     base_currency: Mapped[str] = mapped_column(String(3), nullable=False)
     quote_currency: Mapped[str] = mapped_column(String(3), nullable=False)
     rate: Mapped[Decimal] = mapped_column(Numeric(28, 12), nullable=False)
+    revision: Mapped[str] = mapped_column(String(80), nullable=False, default="original")
     __table_args__ = (
-        UniqueConstraint("provider", "observed_date", "base_currency", "quote_currency", name="uq_fx_observation"),
+        UniqueConstraint("provider", "observed_date", "base_currency", "quote_currency", "revision", name="uq_fx_observation"),
         CheckConstraint("rate > 0", name="ck_fx_positive_rate"),
     )
 
