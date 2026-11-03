@@ -66,3 +66,15 @@ def test_quarterly_facts_have_shorter_freshness_window():
         today=date(2026, 11, 3),
     )
     assert "stale_financial_statement" in errors
+
+
+def test_production_demo_seed_requires_explicit_dev_opt_in(monkeypatch):
+    from scripts.seed_sample_companies import seed_data
+    import pytest
+
+    monkeypatch.setenv("INVESTHELPER_ENV", "production")
+    with pytest.raises(RuntimeError):
+        seed_data(None, allow_demo=True)
+    monkeypatch.setenv("INVESTHELPER_ENV", "test")
+    with pytest.raises(RuntimeError):
+        seed_data(None)
