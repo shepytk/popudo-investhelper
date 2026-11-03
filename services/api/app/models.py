@@ -339,6 +339,7 @@ class FxObservation(Base):
 
 class IngestionJob(Base):
     __tablename__ = "ingestion_job"
+    company_id: Mapped[int] = mapped_column(ForeignKey("company.id"), nullable=False)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     provider: Mapped[str] = mapped_column(String(120), nullable=False)
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -351,3 +352,18 @@ class IngestionJob(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
     __table_args__ = (Index("ix_ingestion_queue", "state", "next_run_at"),)
+
+
+class ExternalIdentifier(Base):
+    """Attested provider identifier, e.g. SEC CIK, tied to a known issuer."""
+    __tablename__ = "external_identifier"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("company.id"), nullable=False)
+    provider: Mapped[str] = mapped_column(String(120), nullable=False)
+    provider_company_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    source_snapshot_id: Mapped[int] = mapped_column(ForeignKey("source_snapshot.id"), nullable=False)
+    verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_company_id", name="uq_external_provider_id"),
+        UniqueConstraint("company_id", "provider", name="uq_company_provider"),
+    )
