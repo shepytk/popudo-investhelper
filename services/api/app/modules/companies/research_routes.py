@@ -44,7 +44,7 @@ def get_sourced_facts(
         )
         for fact, snapshot in rows
     ]
-    return FactPageOut(items=items, as_of=cutoff, limit=limit, offset=offset)
+    return FactPageOut(status="ok" if items else "missing_data", items=items, as_of=cutoff, limit=limit, offset=offset)
 
 
 @router.get("/{company_id}/listings", response_model=list[ListingOut])
