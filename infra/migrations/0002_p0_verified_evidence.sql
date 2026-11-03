@@ -23,3 +23,15 @@ ALTER TABLE insight
     ADD COLUMN IF NOT EXISTS analysis_status VARCHAR(32),
     ADD COLUMN IF NOT EXISTS evidence_json TEXT,
     ADD COLUMN IF NOT EXISTS source_snapshot_id VARCHAR(120);
+
+-- Clear only identifiers matching the exact old demo generator.
+-- Keep legitimate identifiers and all company rows intact.
+UPDATE company c
+SET isin = ''
+FROM country co
+WHERE c.country_id = co.id
+  AND c.isin = co.iso_code || c.ticker || '0000';
+
+-- Historical mock/seed financial rows are intentionally retained for audit.
+-- Their missing provenance keeps them out of research APIs.
+-- Legacy insights remain in the database but are hidden by analysis_status.
