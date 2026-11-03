@@ -21,4 +21,5 @@ ALTER TABLE insight ALTER COLUMN overall_score DROP NOT NULL;
 -- replaced by explicitly verified reports.
 ALTER TABLE insight
     ADD COLUMN IF NOT EXISTS analysis_status VARCHAR(32),
+    ADD COLUMN IF NOT EXISTS evidence_json TEXT,
     ADD COLUMN IF NOT EXISTS source_snapshot_id VARCHAR(120);
