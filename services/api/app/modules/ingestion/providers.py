@@ -79,6 +79,12 @@ class SecCompanyFactsProvider(FinancialDataProvider):
                         quarter_name = entry.get("fp")
                         fiscal_quarter = {"Q1": 1, "Q2": 2, "Q3": 3, "Q4": 4}.get(quarter_name)
                         period_type = "annual" if entry["form"] == "10-K" else "quarterly"
+                        if start and period_type == "quarterly" and (end - start).days > 105:
+                            # SEC 10-Q also reports YTD totals; never label YTD as a discrete quarter.
+                            continue
+                        if start and period_type == "annual" and (end - start).days < 260:
+                            # Annual filing may contain comparative quarterly values.
+                            continue
                         if period_type == "annual":
                             fiscal_quarter = None
                         elif fiscal_quarter is None:
