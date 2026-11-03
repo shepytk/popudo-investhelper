@@ -32,7 +32,7 @@ def apply_migrations(url: str, directory: Path = MIGRATIONS) -> list[str]:
                     applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """))
-            found = dict(connection.execute(text("SELECT filename, checksum FROM schema_migration")))
+            found = {row.filename: row.checksum for row in connection.execute(text("SELECT filename, checksum FROM schema_migration"))}
             scripts = sorted(directory.glob("[0-9][0-9][0-9][0-9]_*.sql"))
             if not scripts:
                 raise RuntimeError("No schema migrations found")
