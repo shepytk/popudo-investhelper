@@ -115,6 +115,7 @@ class Insight(Base):
     opportunities: Mapped[str] = mapped_column(Text, nullable=False)
     questions_for_further_research: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     analysis_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    evidence_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_snapshot_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
 
