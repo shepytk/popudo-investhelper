@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.main import app
+from app.shared.database.base import Base
+from app.shared.database.session import engine
 from app.models import FinancialStatement, Insight
 from app.shared.database.session import SessionLocal
 from scripts.seed_sample_companies import seed_data
@@ -16,6 +18,10 @@ client = TestClient(app)
 
 
 def setup_module() -> None:
+    # Test fixtures are explicit; production app import must never create schema.
+    Base.metadata.create_all(bind=engine)
+    with engine.begin() as connection:
+        connection.exec_driver_sql("CREATE TABLE IF NOT EXISTS schema_migration (filename TEXT PRIMARY KEY, checksum TEXT NOT NULL)")
     with SessionLocal() as db:
         seed_data(db, allow_demo=True)
 

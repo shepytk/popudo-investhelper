@@ -62,25 +62,29 @@ Sample companies seeded by `scripts/seed_sample_companies.py`:
 
 ## P0 financial integrity (November 2026)
 
-**The application is not yet a live stock-data service.** No production financial
-provider has been connected. Demo metadata must be imported deliberately,
+**The application does not yet provide complete live valuations or exchange quotes.** An opt-in SEC EDGAR adapter now exists for official US XBRL filings, but it requires a verified issuer-to-CIK mapping and operator contact. European coverage needs a provider selection. Demo metadata must be imported deliberately,
 and no financial-statement fixtures or synthetic ISINs are seeded on API startup.
 
-### Existing database upgrade
+### Existing database upgrade and startup (P1)
 
-For an existing PostgreSQL database, run these scripts in order **before**
-deploying this branch:
+Versioned migrations now run through `scripts/migrate.py`; the API no
+longer creates database tables on import. The Docker Compose API entrypoint
+runs migrations before launching FastAPI. Back up any existing PostgreSQL DB.
 
 ```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f infra/migrations/0002_p0_verified_evidence.sql
+export PYTHONPATH=services/api:.
+export INVESTHELPER_DATABASE_URL='postgresql+psycopg2://USER:PASSWORD@HOST:5432/DB'
+python scripts/migrate.py
+python scripts/check_schema.py
 ```
 
-Do not run `0001_initial_schema.sql` again on an existing installation.
-New databases created by SQLAlchemy will already have the new fields, but
-production-grade versioned migration management is tracked separately (#24).
-Before migrating, back up the database. The P0 migration is non-destructive:
-it retains historical seed/legacy insights but prevents their reuse in
-verified research and clears only exact old fabricated ISIN patterns.
+This applies the initial schema, the P0 safeguards and all P1 changes
+transactionally and records checksums. It is safe to re-run with unchanged
+migration files. **Never rewrite migration files after deployment.**
+
+For the full architecture, operator workflow, verified SEC CIK linking,
+storage configuration and acceptance tests, see
+[`docs/specs/features/p1-data-platform.md`](docs/specs/features/p1-data-platform.md).
 
 ### Optional demo company metadata
 
@@ -111,10 +115,10 @@ statement exists. Any summary clearly marks valuation/price targets as
 not computable. Generated scores remain NULL and historical mock insights
 are excluded from `GET /api/ai/companies/{id}/insights`.
 
-The source URL is *metadata*, not cryptographic evidence that the provider
-data are accurate. Real vendor import/reconciliation, source authenticity,
-multi-period growth, currency conversion, share-class identities and fair-value
-models are planned in later work. Never interpret a partial summary as a
+Source URLs alone do not authenticate numbers. The P1 source ingestion flow
+hashes raw provider documents, stores a retrieval-time snapshot, and allows
+point-in-time reads of imported facts. Complete statement synthesis, European
+vendor integration and fair-value models remain separate work. Never interpret a partial summary as a
 completed stock recommendation.
 
 ### Regression tests
