@@ -27,3 +27,16 @@ class FactPageOut(BaseModel):
     limit: int
     offset: int
     as_of: datetime
+
+
+class SourcedQuoteOut(BaseModel):
+    listing_id: int
+    mic: str
+    symbol: str
+    date: date
+    close: Decimal
+    currency_code: str
+    provider: str
+    source_url: str
+    source_sha256: str
+    retrieved_at: datetime
