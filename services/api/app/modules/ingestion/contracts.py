@@ -62,6 +62,7 @@ class ProviderFX:
     base_currency: str
     quote_currency: str
     rate: Decimal
+    revision: str = "original"
 
 
 @dataclass(frozen=True)
