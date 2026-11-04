@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.observability import access_logs
 from app.modules.companies.routes import router as companies_router
 from app.modules.companies.research_routes import router as research_router
 from app.modules.countries.routes import router as countries_router
@@ -13,6 +14,7 @@ from app.shared.database.readiness import database_ready
 from app.shared.database.session import engine
 
 app = FastAPI(title=settings.app_name)
+app.middleware("http")(access_logs)
 app.include_router(countries_router)
 app.include_router(sectors_router)
 app.include_router(companies_router)
