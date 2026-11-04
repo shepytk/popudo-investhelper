@@ -8,6 +8,7 @@ export default function Home() {
         MVP flow: Country → Sector → Company → Fundamentals → AI Insight.
       </p>
       <div className="mt-6 flex gap-4">
+        <Link className="rounded bg-black px-4 py-2 text-white" href="/screen">Company Screener</Link>
         <Link className="rounded bg-black px-4 py-2 text-white" href="/sectors">
           Browse Sectors
         </Link>

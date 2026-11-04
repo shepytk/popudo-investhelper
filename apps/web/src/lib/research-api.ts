@@ -7,7 +7,7 @@ export type ResearchResult<T> =
   | { status: "ok"; data: T }
   | { status: "error"; code: FailureCode; message: string; httpStatus?: number };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+const API_BASE = process.env.INVESTHELPER_INTERNAL_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 
 export async function researchGet<T>(path: string): Promise<ResearchResult<T>> {
   try {

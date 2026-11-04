@@ -1,0 +1,53 @@
+name: P3 Browser Research Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "docker-compose.yml"
+      - "services/api/**"
+      - "scripts/**"
+      - ".github/workflows/p3-browser-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      POSTGRES_DB: investhelper
+      POSTGRES_USER: investhelper
+      POSTGRES_PASSWORD: ci-only-strong-password-for-browser
+      MINIO_ROOT_USER: ci-browser
+      MINIO_ROOT_PASSWORD: ci-only-strong-password-for-browser-minio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Start app from clean checkout
+        run: docker compose up --build --detach --wait db api web
+      - name: Initialize metadata-only issuer
+        run: |
+          docker compose exec -T api python scripts/initialize_taxonomy.py
+          docker compose exec -T api python scripts/register_company.py \
+            --name "Example Corp" --ticker EXM --exchange NASDAQ --country USA \
+            --sector Semiconductors --industry Semiconductors --currency USD
+      - name: Install browser test runtime
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm install --no-save @playwright/test@1.64.1 @axe-core/playwright@4.10.2
+          npx playwright install chromium --with-deps
+      - name: Exercise mobile, accessibility and empty research states
+        working-directory: apps/web
+        run: npx playwright test e2e/research.spec.js --reporter=line --workers=1
+      - name: Print application logs on failure
+        if: failure()
+        run: docker compose logs --tail=150 api web db
+      - name: Destroy isolated data
+        if: always()
+        run: docker compose down --volumes --remove-orphans
