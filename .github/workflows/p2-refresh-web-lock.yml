@@ -1,0 +1,38 @@
+name: P2 Refresh Web Lockfile
+
+on:
+  push:
+    branches: [chore/p2-security-audit]
+    paths:
+      - ".github/workflows/p2-refresh-web-lock.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-dependency-lock:
+    if: github.repository == 'shepytk/popudo-investhelper'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chore/p2-security-audit
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install patched Next.js and update vulnerable transitive dependencies
+        working-directory: apps/web
+        run: |
+          npm install next@16.4.5 --save-exact
+          npm audit fix --omit=dev
+          npm audit --omit=dev --audit-level=high
+      - name: Commit reproducible dependency lock
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/package.json apps/web/package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(security): update patched Next.js and production dependency lock"
+            git push origin HEAD:chore/p2-security-audit
+          fi
