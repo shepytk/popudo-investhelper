@@ -14,7 +14,8 @@ def validate_compose(text: str) -> list[str]:
             errors.append(f"Missing infrastructure service {name}")
             continue
         after = text.split(marker, 1)[1]
-        until = after.find("\n  ")
+        boundary = re.search(r"(?m)^  [a-z][a-z0-9_-]*:\\s*$", after)
+        until = boundary.start() if boundary else -1
         block = after if until == -1 else after[:until]
         if "\n    ports:" in block:
             errors.append(f"Infrastructure service {name} publishes a port")
