@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -22,8 +23,7 @@ def test_audit_log_ignores_secrets_and_provider_raw_payload(caplog):
         assert forbidden not in caplog.records[-1].message
 
 
-@pytest.mark.asyncio
-async def test_request_logging_excludes_authorization_header_and_query(caplog):
+def test_request_logging_excludes_authorization_header_and_query(caplog):
     request = MagicMock()
     request.method = "GET"
     request.headers = {"Authorization": "Bearer secret-token"}
@@ -35,7 +35,7 @@ async def test_request_logging_excludes_authorization_header_and_query(caplog):
         return response
 
     with caplog.at_level(logging.INFO, logger="investhelper.audit"):
-        result = await access_logs(request, next_response)
+        result = asyncio.run(access_logs(request, next_response))
     assert result.headers["X-Request-ID"]
     log = caplog.records[-1].message
     assert "secret-token" not in log
