@@ -25,3 +25,17 @@ test("keyboard-accessible research summary action exists", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Generate sourced summary" })).toBeEnabled();
   expect(await page.locator("a, button").count()).toBeGreaterThan(1);
 });
+
+
+test("mobile stock screening is keyboard friendly with real API results", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("http://127.0.0.1:3000/screen");
+  const search = page.getByRole("textbox", { name: "Company name or ticker" });
+  await search.fill("EXM");
+  await page.getByRole("button", { name: "Apply filters" }).click();
+  await expect(page.getByRole("link", { name: "Example Corp" })).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("matching issuers");
+  expect(await page.evaluate(() => document.body.scrollWidth)).toBeLessThanOrEqual(392);
+  const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+  expect(accessibility.violations).toEqual([]);
+});
