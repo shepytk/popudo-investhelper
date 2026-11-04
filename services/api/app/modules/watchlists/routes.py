@@ -67,6 +67,20 @@ def get_watchlist(watchlist_id: int, principal: Principal = Depends(current_user
     return _owner_list(db, watchlist_id, principal)
 
 
+@router.patch("/{watchlist_id}", response_model=WatchlistOut)
+def rename_watchlist(
+    watchlist_id: int, body: NewWatchlist,
+    principal: Principal = Depends(current_user), db: Session = Depends(get_db),
+):
+    watchlist = _owner_list(db, watchlist_id, principal)
+    if not body.name.strip():
+        raise HTTPException(status_code=422, detail={"code": "invalid_name", "message": "Name required"})
+    watchlist.name = body.name.strip()
+    db.commit()
+    db.refresh(watchlist)
+    return watchlist
+
+
 @router.delete("/{watchlist_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_watchlist(watchlist_id: int, principal: Principal = Depends(current_user), db: Session = Depends(get_db)):
     watchlist = _owner_list(db, watchlist_id, principal)

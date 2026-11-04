@@ -88,3 +88,43 @@ def test_routes_fail_closed_when_oidc_is_unconfigured(monkeypatch):
         response = client.get("/api/me/watchlists")
     assert response.status_code == 503
     assert response.json()["detail"]["code"] == "auth_not_configured"
+
+
+def test_screening_presets_are_persisted_and_owned(auth_client):
+    client, principal = auth_client
+    payload = {"name": "Dutch Tech", "filters": {"q": "ASML", "country_id": 1, "sector_id": 1}}
+    created = client.post("/api/me/screening-presets", json=payload)
+    assert created.status_code == 201, created.text
+    preset_id = created.json()["id"]
+    assert created.json()["filters"]["q"] == "ASML"
+    assert len(client.get("/api/me/screening-presets").json()) == 1
+    assert client.post("/api/me/screening-presets", json=payload).status_code == 409
+
+    renamed = client.put(f"/api/me/screening-presets/{preset_id}", json={
+        "name": "Dutch Tech Updated", "filters": {"country_id": 1},
+    })
+    assert renamed.status_code == 200
+    assert renamed.json()["name"] == "Dutch Tech Updated"
+
+    principal["id"] = "bob"
+    assert client.get("/api/me/screening-presets").json() == []
+    assert client.get(f"/api/me/screening-presets/{preset_id}").status_code == 404
+    assert client.put(f"/api/me/screening-presets/{preset_id}", json=payload).status_code == 404
+    assert client.delete(f"/api/me/screening-presets/{preset_id}").status_code == 404
+
+    principal["id"] = "alice"
+    assert client.get(f"/api/me/screening-presets/{preset_id}").status_code == 200
+    assert client.delete(f"/api/me/screening-presets/{preset_id}").status_code == 204
+    assert client.get("/api/me/screening-presets").json() == []
+
+
+def test_owner_can_rename_watchlist(auth_client):
+    client, principal = auth_client
+    created = client.post("/api/me/watchlists", json={"name": "Old Name"})
+    assert created.status_code == 201
+    wid = created.json()["id"]
+    renamed = client.patch(f"/api/me/watchlists/{wid}", json={"name": "Long Term"})
+    assert renamed.status_code == 200
+    assert renamed.json()["name"] == "Long Term"
+    principal["id"] = "bob"
+    assert client.patch(f"/api/me/watchlists/{wid}", json={"name": "Stolen"}).status_code == 404
