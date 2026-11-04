@@ -8,6 +8,7 @@ from app.modules.companies.research_routes import router as research_router
 from app.modules.countries.routes import router as countries_router
 from app.modules.insights.routes import router as insights_router
 from app.modules.sectors.routes import router as sectors_router
+from app.modules.watchlists.routes import router as watchlists_router
 from app.shared.database.readiness import database_ready
 from app.shared.database.session import engine
 
@@ -17,6 +18,7 @@ app.include_router(sectors_router)
 app.include_router(companies_router)
 app.include_router(research_router)
 app.include_router(insights_router)
+app.include_router(watchlists_router)
 
 
 @app.get("/health/live")
