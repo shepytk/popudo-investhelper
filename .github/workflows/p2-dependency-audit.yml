@@ -52,3 +52,29 @@ jobs:
           MINIO_ROOT_USER: "ci-operator"
           MINIO_ROOT_PASSWORD: "ci-only-strong-secret-used-for-validation"
         run: docker compose config --quiet
+
+  built-container-vulnerabilities:
+    name: Trivy scan built ${{ matrix.component }} image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: api
+            dockerfile: services/api/Dockerfile
+          - component: web
+            dockerfile: apps/web/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build deployment container image
+        run: docker build -f "${{ matrix.dockerfile }}" -t "popudo-${{ matrix.component }}:security-test" .
+      - name: Scan OS and application dependencies
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: "popudo-${{ matrix.component }}:security-test"
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
