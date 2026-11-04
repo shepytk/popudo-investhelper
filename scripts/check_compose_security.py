@@ -1,5 +1,6 @@
 """Static Compose security guard (no Docker required)."""
 from pathlib import Path
+import re
 
 COMPOSE = Path(__file__).resolve().parents[1] / "docker-compose.yml"
 
