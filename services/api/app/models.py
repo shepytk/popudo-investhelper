@@ -369,3 +369,20 @@ class ExternalIdentifier(Base):
         UniqueConstraint("provider", "provider_company_id", name="uq_external_provider_id"),
         UniqueConstraint("company_id", "provider", name="uq_company_provider"),
     )
+
+
+class ScreeningPreset(Base):
+    """A durable saved screening query, isolated by the authenticated user."""
+    __tablename__ = "screening_preset"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    filters_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "name", name="uq_screening_preset_owner_name"),
+        Index("ix_screening_preset_owner_id", "user_id", "id"),
+    )
