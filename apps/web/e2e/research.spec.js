@@ -1,5 +1,5 @@
-const { test, expect } = require("@playwright/test");
-const AxeBuilder = require("@axe-core/playwright").default;
+import { test, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 test("research missing data is honest, accessible and mobile usable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
