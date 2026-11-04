@@ -7,6 +7,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.models import ExternalIdentifier, IngestionJob
+from app.observability import audit
 from app.modules.ingestion.contracts import SnapshotStore
 from app.modules.ingestion.pipeline import import_batch
 from app.modules.ingestion.providers import ProviderRateLimited, provider_from_environment
@@ -89,6 +90,10 @@ def work_one(session_factory: sessionmaker, store: SnapshotStore) -> bool:
             job.state = "succeeded"
             job.completed_at = naive_utc()
             job.last_error = None
+            audit("ingestion.succeeded", job_id=job_id, company_id=company_id,
+                  provider=provider_name, state="succeeded", attempts=job.attempts,
+                  facts_imported=len(batch.facts), quotes_imported=len(batch.quotes),
+                  fx_imported=len(batch.fx_rates), listings_imported=len(batch.listings))
     except Exception as exc:
         with session_factory.begin() as db:
             job = db.get(IngestionJob, job_id)
@@ -101,4 +106,7 @@ def work_one(session_factory: sessionmaker, store: SnapshotStore) -> bool:
                 if isinstance(exc, ProviderRateLimited):
                     backoff = max(backoff, exc.retry_after)
                 job.next_run_at = naive_utc() + timedelta(seconds=backoff)
+            audit("ingestion.failed", job_id=job_id, company_id=company_id,
+                  provider=provider_name, state=job.state,
+                  attempts=job.attempts, error_type=type(exc).__name__)
     return True
