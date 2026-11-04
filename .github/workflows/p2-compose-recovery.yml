@@ -1,0 +1,62 @@
+name: P2 Clean Clone and Recovery Drill
+
+on:
+  pull_request:
+    paths:
+      - "docker-compose.yml"
+      - "services/api/**"
+      - "apps/web/**"
+      - "scripts/**"
+      - ".github/workflows/p2-compose-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clean-clone-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      POSTGRES_DB: investhelper
+      POSTGRES_USER: investhelper
+      POSTGRES_PASSWORD: ci-only-strong-password-for-ephemeral-db
+      MINIO_ROOT_USER: ci-objectstore
+      MINIO_ROOT_PASSWORD: ci-only-strong-password-for-ephemeral-minio
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate clean-clone Compose config
+        run: docker compose config --quiet
+      - name: Build and start full application
+        run: docker compose up --build --detach --wait db redis minio api web
+      - name: Smoke test app and ready migrated API
+        run: |
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8000/health/ready | grep -q '"status":"ok"'; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/health/ready | grep -q '"status":"ok"'
+          curl -fsS http://127.0.0.1:8000/api/companies/page
+          for i in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3000/ >/dev/null
+      - name: Verify no host-published infrastructure ports
+        run: |
+          docker compose ps --format json > /tmp/p2-compose-ps.json
+          python scripts/check_compose_security.py
+      - name: Restore PostgreSQL backup into a separate database
+        run: |
+          docker compose exec -T db pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc > /tmp/p2-db.backup
+          test -s /tmp/p2-db.backup
+          docker compose exec -T db createdb -U "$POSTGRES_USER" investhelper_restore
+          docker compose exec -T db pg_restore -U "$POSTGRES_USER" -d investhelper_restore --no-owner --no-privileges < /tmp/p2-db.backup
+          docker compose exec -T db psql -U "$POSTGRES_USER" -d investhelper_restore -tAc "SELECT COUNT(*) FROM schema_migration" | grep -E '^[1-9][0-9]*$'
+          docker compose exec -T db psql -U "$POSTGRES_USER" -d investhelper_restore -tAc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public'" | grep -E '^[1-9][0-9]*$'
+      - name: Diagnostic logs on failure
+        if: failure()
+        run: docker compose logs --tail=120 api web db minio
+      - name: Tear down all ephemeral services
+        if: always()
+        run: docker compose down --volumes --remove-orphans
