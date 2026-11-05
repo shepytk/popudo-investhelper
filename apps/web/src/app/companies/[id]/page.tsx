@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { FinancialTrend } from "@/components/financial-trend";
+import { CalculationTrace } from "@/components/calculation-trace";
 import { ResearchDataStatus } from "@/components/research-data-status";
 import { researchGet } from "@/lib/research-api";
 import { InsightPanel } from "./insight-panel";
@@ -120,7 +121,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         <p className="mt-2 text-sm">Legacy display symbol: {issuer.ticker} · {issuer.exchange}</p>
         <p className="mt-3 max-w-3xl text-sm">{issuer.description || "Issuer description not available."}</p>
         <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">
-          A company may have multiple listings, share classes and trading currencies. Verify the instrument below.
+          A company may have multiple listings, share classes and trading currencies. Verify the instrument below. Currency conversions require dated ECB fixing evidence; unavailable conversions are never assumed to equal the original amount.
         </p>
       </header>
 
@@ -146,7 +147,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
                 <td className={cell}>{row.mic}</td>
                 <td className={cell}>{row.currency_code}</td>
                 <td className={cell}>{row.is_adr ? "ADR" : "Non-ADR listing"}<span className="block text-xs">{row.verified ? "Identity verified" : "Identity not yet verified"}</span></td>
-                <td className={cell}>{row.valid_from}</td>
+                <td className={cell}>{row.valid_from}{row.valid_to && <span className="block text-xs">Valid until {row.valid_to}</span>}</td>
               </tr>)}</tbody>
             </table>
           </div>
@@ -179,6 +180,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         ) : (
           <div className="mt-4 space-y-6">
             <FinancialTrend data={annual}/>
+            <CalculationTrace statements={annual} />
             <div className="max-w-full overflow-x-auto rounded border border-slate-200 dark:border-slate-700"
               tabIndex={0} role="region" aria-label="Annual financial statements, horizontally scrollable">
               <table className="min-w-[930px] w-full text-sm">
