@@ -1,0 +1,44 @@
+name: P3 Mobile and Accessibility Browser Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/p3-browser-accessibility.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install frontend and isolated test runner
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false @playwright/test@1.56.1 @axe-core/playwright@4.11.0
+      - name: Install browser and Linux dependencies
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Test 320px, 390px, 768px, keyboard and WCAG
+        working-directory: apps/web
+        env:
+          CI: "true"
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+        run: npx playwright test
+      - name: Upload failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-browser-failures
+          path: apps/web/test-results/
+          retention-days: 7
