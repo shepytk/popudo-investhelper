@@ -32,6 +32,6 @@ test("invalid terminal assumptions do not produce valuation", async ({ page }) =
   await page.getByLabel(/Terminal growth/).fill("5");
   await page.getByLabel(/Bear\/bull growth difference/).fill("2");
   await page.getByRole("button", { name: "Calculate scenarios" }).click();
-  await expect(page.getByRole("alert")).toContainText("Terminal growth");
+  await expect(page.getByRole("alert").filter({ hasText: "Terminal growth" })).toContainText("Terminal growth");
   await expect(page.getByText("Hypothetical intrinsic value per diluted share")).toHaveCount(0);
 });
