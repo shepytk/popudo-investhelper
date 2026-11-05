@@ -1,0 +1,33 @@
+name: P3 Research UI Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "scripts/check_p3_research_ui.py"
+      - ".github/workflows/p3-research-ui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research-ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify structural fail-closed UI contract
+        working-directory: .
+        run: python scripts/check_p3_research_ui.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build

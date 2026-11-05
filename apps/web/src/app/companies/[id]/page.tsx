@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { FinancialTrend } from "@/components/financial-trend";
+import { ResearchDataStatus } from "@/components/research-data-status";
 import { researchGet } from "@/lib/research-api";
 import { InsightPanel } from "./insight-panel";
 
@@ -99,7 +100,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         <h1 className="mt-4 text-2xl font-semibold">
           {company.code === "company_not_found" ? "Company not found" : "Company data unavailable"}
         </h1>
-        <p role="alert" className="mt-3 text-sm">{company.message}</p>
+        <ResearchDataStatus subject="Issuer" code={company.code} message={company.message} />
       </main>
     );
   }
@@ -126,9 +127,9 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
       <section aria-labelledby="listings-heading" className="rounded-xl border border-slate-300 p-4 dark:border-slate-700 sm:p-6">
         <h2 id="listings-heading" className="text-xl font-semibold">Verified exchange listings</h2>
         {listings.status === "error" ? (
-          <p role="status" className="mt-3 text-sm">Listings temporarily unavailable. No exchange identity assumed.</p>
+          <ResearchDataStatus subject="Listings" code={listings.code} message={listings.message} />
         ) : listingRows.length === 0 ? (
-          <p role="status" className="mt-3 text-sm">No independently verified listing or ADR mapping has been imported yet.</p>
+          <ResearchDataStatus subject="Listings" code="empty" />
         ) : (
           <div className="mt-3 overflow-x-auto" tabIndex={0} role="region" aria-label="Exchange listings, scrollable on narrow screens">
             <table className="min-w-[520px] w-full text-sm">
@@ -144,7 +145,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
                 <td className={cell}>{row.symbol}</td>
                 <td className={cell}>{row.mic}</td>
                 <td className={cell}>{row.currency_code}</td>
-                <td className={cell}>{row.is_adr ? "ADR" : "Local / non-ADR listing"}</td>
+                <td className={cell}>{row.is_adr ? "ADR" : "Non-ADR listing"}<span className="block text-xs">{row.verified ? "Identity verified" : "Identity not yet verified"}</span></td>
                 <td className={cell}>{row.valid_from}</td>
               </tr>)}</tbody>
             </table>
@@ -155,21 +156,15 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
       <section aria-labelledby="quote-heading" className="rounded-xl border border-slate-300 p-4 dark:border-slate-700 sm:p-6">
         <h2 id="quote-heading" className="text-xl font-semibold">Market quotations</h2>
         {quotes.status === "error" ? (
-          <p role="status" className="mt-3 text-sm">
-            {quotes.code === "stale_data"
-              ? "Only stale quotations are available; prices have been withheld."
-              : quotes.code === "missing_data"
-                ? "No source-verified quotations have been imported."
-                : "Market price service unavailable — not reported as a zero price."}
-          </p>
+          <ResearchDataStatus subject="Market quotations" code={quotes.code} message={quotes.message} />
         ) : quotes.data.length === 0 ? (
-          <p className="mt-3 text-sm">No sourced quote observations.</p>
+          <ResearchDataStatus subject="Market quotations" code="empty" />
         ) : (
           <ul className="mt-3 space-y-2 text-sm">
             {quotes.data.slice(0, 5).map((quote) => <li key={`${quote.mic}-${quote.symbol}-${quote.date}`}>
               <strong>{quote.symbol} · {quote.mic}</strong>: {quote.close} {quote.currency_code}
               {" "}on {quote.date}; {sourceLink(quote.provider, quote.source_url)}
-              <span className="text-slate-600 dark:text-slate-300"> · fetched {sourceDate(quote.retrieved_at)}</span>
+              <span className="text-slate-600 dark:text-slate-300"> · observation date {quote.date} · fetched {sourceDate(quote.retrieved_at)}</span>
             </li>)}
           </ul>
         )}
@@ -178,14 +173,9 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
       <section aria-labelledby="fundamentals-heading" className="rounded-xl border border-slate-300 p-4 dark:border-slate-700 sm:p-6">
         <h2 id="fundamentals-heading" className="text-xl font-semibold">Verified fundamentals</h2>
         {statements.status === "error" ? (
-          <p role="alert" className="mt-3 text-sm">
-            Financial statement service unavailable. Amounts have not been replaced with zeroes.
-          </p>
+          <ResearchDataStatus subject="Financial statements" code={statements.code} message={statements.message} />
         ) : annual.length === 0 ? (
-          <p role="status" className="mt-3 text-sm">
-            No complete, verified annual statements are available. Missing data, unit conversions,
-            financial reconciliations or source checks may be outstanding.
-          </p>
+          <ResearchDataStatus subject="Verified annual statements" code="empty" message="Financial reconciliations, source validation or reporting-period alignment may still be outstanding." />
         ) : (
           <div className="mt-4 space-y-6">
             <FinancialTrend data={annual}/>
@@ -193,7 +183,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
               tabIndex={0} role="region" aria-label="Annual financial statements, horizontally scrollable">
               <table className="min-w-[930px] w-full text-sm">
                 <caption className="px-4 py-2 text-left text-sm">
-                  Original reported amounts (not forecasts). Values retain source precision; reporting currencies may differ.
+                  Source-backed reported amounts (not forecasts). Units are shown per report; reporting currencies may differ.
                 </caption>
                 <thead><tr className="border-y border-slate-200 dark:border-slate-700">
                   <th scope="col" className={heading}>Fiscal year</th>
