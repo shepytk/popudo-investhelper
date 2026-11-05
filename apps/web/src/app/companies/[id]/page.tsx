@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { FinancialTrend } from "@/components/financial-trend";
 import { CalculationTrace } from "@/components/calculation-trace";
+import { EurQuote } from "@/components/eur-quote";
 import { ResearchDataStatus } from "@/components/research-data-status";
 import { researchGet } from "@/lib/research-api";
 import { InsightPanel } from "./insight-panel";
@@ -166,6 +167,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
               <strong>{quote.symbol} · {quote.mic}</strong>: {quote.close} {quote.currency_code}
               {" "}on {quote.date}; {sourceLink(quote.provider, quote.source_url)}
               <span className="text-slate-600 dark:text-slate-300"> · observation date {quote.date} · fetched {sourceDate(quote.retrieved_at)}</span>
+              <EurQuote quote={quote} />
             </li>)}
           </ul>
         )}
