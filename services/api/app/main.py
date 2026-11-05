@@ -8,6 +8,7 @@ from app.modules.companies.routes import router as companies_router
 from app.modules.companies.research_routes import router as research_router
 from app.modules.countries.routes import router as countries_router
 from app.modules.insights.routes import router as insights_router
+from app.modules.ingestion.fx_routes import router as fx_router
 from app.modules.sectors.routes import router as sectors_router
 from app.modules.screening.routes import router as screening_router
 from app.modules.watchlists.routes import router as watchlists_router
@@ -21,6 +22,7 @@ app.include_router(sectors_router)
 app.include_router(companies_router)
 app.include_router(research_router)
 app.include_router(insights_router)
+app.include_router(fx_router)
 app.include_router(watchlists_router)
 app.include_router(screening_router)
 
