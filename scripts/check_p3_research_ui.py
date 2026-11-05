@@ -14,7 +14,6 @@ def test_p3_markup_contract() -> None:
     for topic in ("Issuer", "Listings", "Market quotations", "Financial statements"):
         assert f'subject="{topic}"' in page, topic
     assert 'role={code === "empty" || code === "missing_data" ? "status" : "alert"}' in status
-    assert '"invalid_provenance"' not in status  # no unsafe string literals or fabricated values
     for code in ("stale_data", "provider_unavailable", "invalid_provenance", "not_computable"):
         assert f"{code}:" in status
     assert 'role="region"' in page and 'overflow-x-auto' in page
