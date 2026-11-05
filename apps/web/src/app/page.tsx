@@ -7,8 +7,9 @@ export default function Home() {
       <p className="max-w-2xl text-slate-700 dark:text-slate-300">
         Browse companies and review financial statements backed by sources. Missing valuation data is displayed as unavailable, not estimated.
       </p>
-      <nav aria-label="Research navigation" className="grid gap-4 sm:grid-cols-2">
+      <nav aria-label="Research navigation" className="grid gap-4 sm:grid-cols-3">
         <Link href="/screener" className="flex min-h-14 items-center rounded-lg border border-slate-500 p-4 font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2">Search and filter companies</Link>
+        <Link href="/valuation-lab" className="flex min-h-14 items-center rounded-lg border border-slate-500 p-4 font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2">Explore hypothetical DCF valuations</Link>
         <Link href="/sectors" className="flex min-h-14 items-center rounded-lg border border-slate-500 p-4 font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2">Browse sectors</Link>
       </nav>
     </main>

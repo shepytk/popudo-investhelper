@@ -38,6 +38,6 @@ test.describe("P3 mobile screening and accessibility", () => {
   test("company API failures never render invented numerical values", async ({ page }) => {
     await page.goto("/companies/1");
     await expect(page.getByRole("main")).toBeVisible();
-    await expect(page.getByRole("alert")).toContainText(/unavailable|not found/i);
+    await expect(page.getByRole("alert").filter({ hasText: /unavailable|not found/i })).toContainText(/unavailable|not found/i);
   });
 });

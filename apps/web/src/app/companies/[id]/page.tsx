@@ -236,6 +236,11 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
         )}
       </section>
 
+      <section aria-labelledby="valuation-method-title" className="rounded-xl border border-slate-300 p-4 dark:border-slate-700 sm:p-6">
+        <h2 id="valuation-method-title" className="text-lg font-semibold">Understand valuation methodology</h2>
+        <p className="mt-2 text-sm">Explore a hypothetical DCF model with your own inputs. This does not use this issuer’s unverified or missing data.</p>
+        <Link href="/valuation-lab" className="mt-3 inline-flex min-h-11 items-center rounded border border-slate-500 px-4 underline underline-offset-2 focus-visible:outline-2">Open valuation scenario lab</Link>
+      </section>
       <InsightPanel companyId={issuer.id}/>
     </main>
   );
