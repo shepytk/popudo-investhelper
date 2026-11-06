@@ -1,8 +1,8 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 COPY apps/web/package*.json /app/
-RUN npm install
+RUN npm ci
 COPY apps/web /app
 
 EXPOSE 3000
