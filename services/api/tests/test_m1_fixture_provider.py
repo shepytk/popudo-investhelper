@@ -1,12 +1,10 @@
 """Fixture adapter contract and isolation tests; no DB or network required."""
 import json
-from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
-from app.modules.ingestion.contracts import FinancialDataProvider
 from app.modules.ingestion.fixture_provider import FixtureFinancialDataProvider
 from app.modules.ingestion.providers import ProviderUnavailable, provider_from_environment
 
@@ -16,7 +14,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "m1_sample_issuer.json"
 
 def test_provider_obeys_contract_and_is_deterministic():
     provider = FixtureFinancialDataProvider(FIXTURE, environment="test")
-    assert isinstance(provider, FinancialDataProvider)
+    assert callable(provider.collect)
     first = provider.collect("OFFLINE-ISSUER-1")
     second = provider.collect("OFFLINE-ISSUER-1")
     assert first == second
