@@ -21,3 +21,13 @@ The system must **not** expose third-party licensed content through public endpo
 - SEC and ECB have different terms and rate limits; they are not interchangeable with commercial financial-data providers.
 
 **P2 #38 remains open** until a real provider/usage decision and automated redistribution constraints are in place.
+
+## Machine-enforced redistribution protection
+
+In production the API now denies sourced statement, fact, quote, exchange-listing and ECB FX records unless **all underlying providers** are included in `INVESTHELPER_PUBLIC_DATA_PROVIDERS`. The default is empty (deny all). A malformed list or wildcard also fails closed. No provider is approved automatically merely because a filing or quote is publicly accessible. Development and test environments are not subject to this production redistribution gate.
+
+The licensing policy module lives at `services/api/app/licensing.py`. An operator may add a provider **only after** recording the applicable agreement, account tier, geography, user type, storage limit, redistribution rights and AI permissions in this inventory. For example, configuring `sec_edgar` is a deliberate operational approval, not evidence that use is legally permitted.
+
+Generated AI insights currently lack a complete machine-readable lineage of every input source and therefore remain disabled for public production delivery until that source-to-insight provenance is added. Basic issuer directory labels and any future endpoints also require independent source classification before release.
+
+**#38 remains open** until contracts are approved, endpoint coverage is audited, provider-aware rights are enforceable per user/account where required, and a production acceptance test verifies actual configuration.

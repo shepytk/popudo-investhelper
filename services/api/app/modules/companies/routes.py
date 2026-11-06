@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.modules.companies import repository
+from app.licensing import enforce_public_data_providers
 from app.modules.companies.errors import domain_error
 from app.modules.companies.schemas import CompanyOut, CompanyPageOut, FinancialOut
 from app.shared.database.session import get_db
@@ -59,4 +60,6 @@ def get_company(company_id: int, db: Session = Depends(get_db)):
 def get_company_financials(company_id: int, db: Session = Depends(get_db)):
     if not repository.get_company(db, company_id):
         raise HTTPException(status_code=404, detail={"code": "company_not_found", "message": "Company not found"})
-    return repository.get_company_financials(db, company_id)
+    rows = repository.get_company_financials(db, company_id)
+    enforce_public_data_providers(row.source for row in rows)
+    return rows
