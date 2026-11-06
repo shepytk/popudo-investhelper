@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import FxObservation, SourceSnapshot
+from app.licensing import enforce_public_data_providers
 from app.modules.companies.errors import domain_error
 from app.shared.database.session import get_db
 
@@ -52,6 +53,7 @@ def eur_reference(
     if latest is None:
         raise domain_error(404, "missing_data", "No recent sourced ECB fixing for this currency and date")
     rate, evidence = latest
+    enforce_public_data_providers((rate.provider, evidence.provider))
     if not evidence.source_url.startswith("https://") or not evidence.content_hash or rate.rate <= 0:
         raise domain_error(422, "invalid_provenance", "ECB fixing lacks valid sourcing")
     return EurReferenceOut(
