@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { calculateDcf } from "@/lib/valuation/model";
+import { calculateDcf, DCF_MODEL_VERSION } from "@/lib/valuation/model";
 import { parseValuationForm, type ValuationForm } from "@/lib/valuation/input";
 import { buildScenarios, buildSensitivity, enterpriseValueShareFromTerminal, marginOfSafety } from "@/lib/valuation/scenarios";
 
@@ -28,6 +28,7 @@ const percent = (n: number) => `${format(n * 100, 2)}%`;
 export function ValuationLab() {
   const [form, setForm] = useState<ValuationForm>(EMPTY);
   const [show, setShow] = useState(false);
+  const [run, setRun] = useState<{ id: string; generatedAt: string } | null>(null);
   const parsed = useMemo(() => parseValuationForm(form), [form]);
   const base = parsed.status === "ready" ? calculateDcf(parsed.input) : null;
   const valid = parsed.status === "ready" && base?.status === "ok";
@@ -45,6 +46,7 @@ export function ValuationLab() {
   function change(key: keyof ValuationForm, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
     setShow(false);
+    setRun(null);
   }
 
   return (
@@ -53,7 +55,7 @@ export function ValuationLab() {
         <h2 id="valuation-lab-title" className="text-2xl font-semibold">DCF valuation scenario lab</h2>
         <p className="mt-2 text-sm">Enter your own assumptions to explore valuation methodology. All inputs are hypothetical and stay in this browser session. Nothing is imported from company records.</p>
       </div>
-      <form onSubmit={(event) => { event.preventDefault(); setShow(true); }} className="space-y-4">
+      <form onSubmit={(event) => { event.preventDefault(); setRun({ id: crypto.randomUUID(), generatedAt: new Date().toISOString() }); setShow(true); }} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {LABELS.map((field) => (
             <label key={field.key} className="block text-sm">
@@ -81,7 +83,7 @@ export function ValuationLab() {
         </div>
         <div className="flex flex-wrap gap-3">
           <button type="submit" className="min-h-11 rounded bg-slate-900 px-5 py-2 text-white focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-slate-100 dark:text-slate-900">Calculate scenarios</button>
-          <button type="button" onClick={() => { setForm(EMPTY); setShow(false); }}
+          <button type="button" onClick={() => { setForm(EMPTY); setShow(false); setRun(null); }}
             className="min-h-11 rounded border border-slate-500 px-5 py-2 focus-visible:outline-2 focus-visible:outline-offset-2">Clear assumptions</button>
         </div>
       </form>
@@ -98,6 +100,7 @@ export function ValuationLab() {
             <p className="mt-2 text-sm">Present value of terminal cash flows: {percent(enterpriseValueShareFromTerminal(result))} of enterprise value.</p>
             {safety !== null && <p className="mt-2 text-sm">Margin of safety versus entered price: {percent(safety)}.</p>}
             <p className="mt-2 text-xs">Not a company valuation or investment recommendation. This result uses only your manually entered assumptions.</p>
+            {run && <p className="mt-2 break-all text-xs">Calculation: {DCF_MODEL_VERSION} · Run: {run.id} · Input source: manual · Generated: {run.generatedAt}. This run identifier is browser-local and is not persisted.</p>}
           </div>
           <figure className="space-y-2">
             <h3 className="text-lg font-semibold">Projected annual free cash flow by scenario</h3>
