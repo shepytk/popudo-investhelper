@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Company, FinancialStatement, Insight
+from app.licensing import public_data_policy
 from app.modules.companies.verification import verified_statements
 from app.modules.companies.errors import domain_error
 from app.modules.insights.schemas import AIInsightOut
@@ -17,6 +18,9 @@ router = APIRouter(prefix="/api/ai/companies", tags=["research-insights"])
 
 @router.post("/{company_id}/generate-insight", response_model=AIInsightOut)
 def generate_insight(company_id: int, db: Session = Depends(get_db)):
+    if public_data_policy().production:
+        raise domain_error(403, "provider_license_restricted",
+                           "Derived insights cannot be published until their source licences are attested.")
     company = db.get(Company, company_id)
     if not company:
         raise domain_error(404, "company_not_found", "Company not found")
@@ -68,6 +72,9 @@ def list_insights(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
+    if public_data_policy().production:
+        raise domain_error(403, "provider_license_restricted",
+                           "Derived insights cannot be published until their source licences are attested.")
     company = db.get(Company, company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
