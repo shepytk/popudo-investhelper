@@ -7,7 +7,12 @@ export type ResearchResult<T> =
   | { status: "ok"; data: T }
   | { status: "error"; code: FailureCode; message: string; httpStatus?: number };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+// Server-only service discovery is distinct from public browser configuration.
+// React Server Components call this module on the server, inside the Compose network.
+const API_BASE =
+  process.env.RESEARCH_API_INTERNAL_URL ||
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "http://localhost:8000";
 
 export async function researchGet<T>(path: string): Promise<ResearchResult<T>> {
   try {
