@@ -1,0 +1,60 @@
+{
+  "subject": "OFFLINE-ISSUER-1",
+  "document_id": "OFFLINE-2024-ANNUAL",
+  "published_at": "2025-02-10T00:00:00Z",
+  "retrieved_at": "2025-02-11T00:00:00Z",
+  "facts": [
+    {
+      "fact_id": "revenue-2024",
+      "filing_version": "annual-2024-v1",
+      "concept": "revenue",
+      "raw_value": "1250000000.00",
+      "raw_unit": "ones",
+      "currency": "EUR",
+      "fiscal_year": 2024,
+      "period_type": "annual",
+      "period_start": "2024-01-01",
+      "period_end": "2024-12-31",
+      "reported_at": "2025-02-10T00:00:00Z"
+    },
+    {
+      "fact_id": "ocf-2024",
+      "filing_version": "annual-2024-v1",
+      "concept": "operating_cash_flow",
+      "raw_value": "270000000.00",
+      "raw_unit": "ones",
+      "currency": "EUR",
+      "fiscal_year": 2024,
+      "period_type": "annual",
+      "period_start": "2024-01-01",
+      "period_end": "2024-12-31",
+      "reported_at": "2025-02-10T00:00:00Z"
+    },
+    {
+      "fact_id": "capex-2024",
+      "filing_version": "annual-2024-v1",
+      "concept": "capital_expenditure",
+      "raw_value": "70000000.00",
+      "raw_unit": "ones",
+      "currency": "EUR",
+      "fiscal_year": 2024,
+      "period_type": "annual",
+      "period_start": "2024-01-01",
+      "period_end": "2024-12-31",
+      "reported_at": "2025-02-10T00:00:00Z"
+    }
+  ],
+  "listings": [
+    {
+      "security_type": "common",
+      "share_class": "ordinary",
+      "isin": null,
+      "mic": "XAMS",
+      "symbol": "OFFLINE",
+      "currency": "EUR",
+      "is_adr": false,
+      "valid_from": "2024-01-01"
+    }
+  ],
+  "quotes": []
+}
