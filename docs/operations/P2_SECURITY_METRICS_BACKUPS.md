@@ -2,9 +2,9 @@
 
 ## Security and containers (#39)
 
-The repository runs a scheduled Trivy scan of both built application images plus all infrastructure images. Reports are informational until an operator reviews the OS/package findings, selects supported patched image tags and commits **verified** SHA256 immutable digests. The workflow emits a resolved image-digest inventory artifact; it does not assert that a mutable tag is immutable. Existing pip-audit/npm-audit and fixed-version tag checks remain enforced independently.
+The repository runs a scheduled Trivy scan of both built application images plus all infrastructure images. **PostgreSQL, Redis, MinIO, Python and Node base images are pinned to verified SHA256 registry digests**, captured from CI; updating an image requires deliberate replacement and rescanning. The workflow emits a resolved image-digest inventory artifact. Existing pip-audit/npm-audit and fixed-version tag checks remain enforced independently. The frontend Docker build uses the committed npm lockfile through `npm ci`.
 
-**Residual before closing #39:** replace Dockerfile and Compose mutable tag references with independently verified digests for the chosen deployment platform; decide and enforce a high/critical vulnerability policy with documented exemptions and expiry. Do not fabricate digests, and do not close this issue based only on passing report-mode scans.
+**Residual before closing #39:** review and triage the HIGH/CRITICAL findings from the Trivy job; patch, or record time-limited risk acceptances. Set a fail-the-build vulnerability threshold after the affected images have been remediated. Refresh validated image digests deliberately as part of each patch. A passing report-mode scan alone does not mean there are zero vulnerabilities.
 
 ## Metrics and calculation provenance (#42)
 
