@@ -1,0 +1,26 @@
+# Private staging: ALL host-facing ports remain loopback-only in docker-compose.yml.
+# Use SSH port forwarding to access the app. Do not publish 3000/8000 on the VPS firewall.
+services:
+  db:
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped
+  minio:
+    restart: unless-stopped
+  api:
+    restart: unless-stopped
+    environment:
+      # Exercise production startup checks and the fail-closed provider licence gate.
+      INVESTHELPER_ENV: production
+      INVESTHELPER_PUBLIC_DATA_PROVIDERS: ""
+  web:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.staging
+    environment:
+      NODE_ENV: production
+      # Server-side fetches must resolve the API through the Compose private network.
+      RESEARCH_API_INTERNAL_URL: http://api:8000
+      # Never embed the container hostname in a public NEXT_PUBLIC variable.
+      NEXT_PUBLIC_API_BASE_URL: ""
