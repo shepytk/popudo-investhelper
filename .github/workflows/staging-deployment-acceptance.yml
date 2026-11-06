@@ -1,0 +1,37 @@
+name: Private Staging Deployment Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "compose.staging.yaml"
+      - ".env.staging.example"
+      - "apps/web/Dockerfile.staging"
+      - "apps/web/src/lib/research-api.ts"
+      - "scripts/staging/**"
+      - ".github/workflows/staging-deployment-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  private-staging:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      POSTGRES_PASSWORD: ciStagingPostgresPassword0123456789
+      MINIO_ROOT_USER: cioperator
+      MINIO_ROOT_PASSWORD: ciStagingMinioPassword0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check private networking and configuration
+        run: |
+          docker compose -f docker-compose.yml -f compose.staging.yaml config --format json |
+            python3 scripts/staging/check_config.py
+      - name: Build and boot staging using production web build
+        run: docker compose -p popudo-staging-ci -f docker-compose.yml -f compose.staging.yaml up -d --build
+      - name: Smoke-test server-rendered UI and API
+        run: bash scripts/staging/smoke.sh
+      - name: Cleanup isolated deployment
+        if: always()
+        run: docker compose -p popudo-staging-ci -f docker-compose.yml -f compose.staging.yaml down -v --remove-orphans
