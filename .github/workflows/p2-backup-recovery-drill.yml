@@ -1,0 +1,33 @@
+name: P2 Postgres and MinIO Backup Recovery Drill
+
+on:
+  pull_request:
+    paths:
+      - "scripts/p2_backup_drill.sh"
+      - "scripts/object_store_archive.py"
+      - "scripts/backup_stack.sh"
+      - "scripts/restore_stack.sh"
+      - ".github/workflows/p2-backup-recovery-drill.yml"
+      - "docker-compose.yml"
+      - "services/api/**"
+  push:
+    branches: [main]
+  schedule:
+    - cron: "47 5 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup-and-restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      POSTGRES_PASSWORD: ci-isolated-db-backup-recovery-password-1234
+      MINIO_ROOT_USER: ci-operator
+      MINIO_ROOT_PASSWORD: ci-isolated-minio-backup-recovery-password-1234
+    steps:
+      - uses: actions/checkout@v4
+      - name: Isolated live Postgres and object-store backup/restore acceptance
+        run: bash scripts/p2_backup_drill.sh

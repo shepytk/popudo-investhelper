@@ -1,3 +1,5 @@
+export const DCF_MODEL_VERSION = "dcf-v1" as const;
+
 /** Pure five-year DCF engine. This module has no React, API, or storage dependencies. */
 export type ValuationInputs = Readonly<{
   baseFcfMillions: number;
