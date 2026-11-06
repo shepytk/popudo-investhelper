@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Company, QuoteObservation, Security, SecurityListing, SourceSnapshot
+from app.licensing import enforce_public_data_providers, public_data_policy
 from app.modules.companies.fact_schemas import FactPageOut, SourcedFactOut, SourcedQuoteOut
 from app.modules.companies.errors import domain_error
 from app.modules.companies.facts import facts_as_of
@@ -31,6 +32,7 @@ def get_sourced_facts(
     if cutoff > datetime.now(timezone.utc):
         raise domain_error(422, "invalid_as_of", "Future as_of is not supported")
     rows = facts_as_of(db, company_id, cutoff, limit=limit, offset=offset)
+    enforce_public_data_providers(p for fact, snapshot in rows for p in (fact.provider, snapshot.provider))
     items = [
         SourcedFactOut(
             id=fact.id, concept=fact.concept, period_type=fact.period_type,
@@ -64,7 +66,16 @@ def get_company_listings(
         .order_by(SecurityListing.mic, SecurityListing.symbol, SecurityListing.id)
         .limit(limit).offset(offset)
     )
-    return list(db.scalars(stmt))
+    rows = list(db.scalars(stmt))
+    if public_data_policy().production and rows:
+        snapshot_ids = {listing.source_snapshot_id for listing in rows if listing.source_snapshot_id is not None}
+        if len(snapshot_ids) != len({listing.source_snapshot_id for listing in rows}):
+            enforce_public_data_providers([None])
+        providers = list(db.scalars(select(SourceSnapshot.provider).where(SourceSnapshot.id.in_(snapshot_ids))))
+        if len(providers) != len(snapshot_ids):
+            enforce_public_data_providers([None])
+        enforce_public_data_providers(providers)
+    return rows
 
 
 @router.get("/{company_id}/quotes", response_model=list[SourcedQuoteOut])
@@ -99,6 +110,7 @@ def get_company_quotes(
     latest_date = rows[0][0].session_date
     if (utc_cutoff.date() - latest_date).days > 10:
         raise domain_error(422, "stale_data", "Latest quote is older than 10 calendar days", retryable=True)
+    enforce_public_data_providers(p for quote, listing, snapshot in rows for p in (quote.provider, snapshot.provider))
     return [
         SourcedQuoteOut(
             listing_id=listing.id, mic=listing.mic, symbol=listing.symbol,
